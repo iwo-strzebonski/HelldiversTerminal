@@ -1,5 +1,6 @@
 #include "MainMenu.h"
 #include "VoidScreen.h"
+#include "MusicPlayer.h"
 #include "Buttons.h"
 
 MainMenu::MainMenu(TFTFunc tft, KeyboardManager* km)
@@ -69,6 +70,17 @@ MainMenu::MainMenu(TFTFunc tft, KeyboardManager* km)
     480 - BUTTON_WIDTH - 10, 160 - BUTTON_HEIGHT / 2,
     true
   );
+  
+  // Audio/Music Player button
+  buttons[6] = new Button(
+    tft,
+    BUTTON_AUDIO,
+    BUTTON_PRESSED,
+    BUTTON_WIDTH,
+    BUTTON_HEIGHT,
+    480 - BUTTON_WIDTH - 10, 10,
+    false
+  );
 }
 
 TFT_eSPI& MainMenu::render() {
@@ -103,6 +115,11 @@ String MainMenu::onClick(uint16_t x, uint16_t y) {
   if (buttons[5] -> onClick(x, y, !stratagemLock)) {
     stratagemLock = !stratagemLock;
     keyboardManager -> toggleKey(KEY_LEFT_CTRL, stratagemLock);
+  }
+  
+  // Audio/Music Player button
+  if (buttons[6] -> onClick(x, y, true)) {
+    return MusicPlayer_TITLE;
   }
 
   return "";

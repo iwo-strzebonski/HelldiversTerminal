@@ -1,11 +1,13 @@
 #include "Display.h"
 
-Display::Display(KeyboardManager* km, SDManager* sdManager)
+Display::Display(KeyboardManager* km, SDManager* sdManager, AudioManager* audioManager)
   : CURR_SCREEN(""),
     sdManager(sdManager),
+    audioManager(audioManager),
     voidScreen(&Display::tft, km),
     splashScreen(&Display::tft, km),
     mainMenu(&Display::tft, km),
+    musicPlayer(&Display::tft, km, audioManager),
     currentScreen(&splashScreen)
 {}
 
@@ -30,17 +32,34 @@ String Display::getScreen() const {
 void Display::setScreen(const String &screen) {
   CURR_SCREEN = screen;
 
+  // Pause audio during screen transition to prevent SPI bus conflicts
+  bool wasPlaying = audioManager && audioManager->isPlaying();
+  if (audioManager) {
+    handleAudioDuringScreenChange(*audioManager, true);
+  }
+
   if (screen == VoidScreen::SCREEN_TITLE) {
     currentScreen = &voidScreen;
   } else if (screen == SplashScreen::SCREEN_TITLE) {
     currentScreen = &splashScreen;
   } else if (screen == MainMenu::SCREEN_TITLE) {
     currentScreen = &mainMenu;
+  } else if (screen == MusicPlayer::SCREEN_TITLE) {
+    currentScreen = &musicPlayer;
   }
 
   if (currentScreen) {
     currentScreen -> render();
   }
+
+  // Resume audio after rendering is complete
+  if (audioManager && wasPlaying) {
+    handleAudioDuringScreenChange(*audioManager, false);
+  }
+}
+
+AudioManager* Display::getAudioManager() const {
+  return audioManager;
 }
 
 uint16_t Display::getMinX() const { return calData[0]; }

@@ -29,6 +29,19 @@ class Button {
 
     virtual void draw(bool pressed = false);
 
+    // Operator overloading: equality comparison based on position and size
+    bool operator==(const Button& other) const;
+    bool operator!=(const Button& other) const;
+    
+    // Operator overloading: check if a point is within button bounds
+    bool operator()(uint16_t x, uint16_t y) const;
+
+    // Getters for position (used for comparison)
+    uint16_t getX() const { return posX; }
+    uint16_t getY() const { return posY; }
+    uint16_t getWidth() const { return width; }
+    uint16_t getHeight() const { return height; }
+
   protected:
     TFTFunc getTFT;
 

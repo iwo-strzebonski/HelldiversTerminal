@@ -28,3 +28,32 @@ bool SDManager::exists(const char* path) {
 bool SDManager::remove(const char* path) {
   return SD.remove(path);
 }
+
+std::vector<String> SDManager::listDirectory(const char* path, ListType type) {
+  std::vector<String> results;
+  
+  File dir = SD.open(path);
+  if (!dir || !dir.isDirectory()) {
+    Serial.print("Failed to open directory: ");
+    Serial.println(path);
+    return results;
+  }
+  
+  File entry;
+  while ((entry = dir.openNextFile())) {
+    bool isDir = entry.isDirectory();
+    String name = entry.name();
+    
+    // Filter based on type parameter
+    if (type == LIST_ALL ||
+        (type == LIST_FILES && !isDir) ||
+        (type == LIST_DIRECTORIES && isDir)) {
+      results.push_back(name);
+    }
+    
+    entry.close();
+  }
+  
+  dir.close();
+  return results;
+}

@@ -7,18 +7,20 @@
 
 #include "SDManager.h"
 #include "KeyboardManager.h"
+#include "AudioManager.h"
 
 #include "Screen.h"
 #include "VoidScreen.h"
 #include "SplashScreen.h"
 #include "MainMenu.h"
+#include "MusicPlayer.h"
 
 #define CALIBRATION_FILE "/TouchData.cal"
 #define REPEAT_CAL false
 
 class Display {
   public:
-    Display(KeyboardManager* km, SDManager* sdManager);
+    Display(KeyboardManager* km, SDManager* sdManager, AudioManager* audioManager);
 
     static TFT_eSPI& tft();
 
@@ -38,6 +40,8 @@ class Display {
     int getHeight() const;
 
     bool getTouch(uint16_t *x, uint16_t *y) const;
+    
+    AudioManager* getAudioManager() const;
 
   private:
     uint16_t calData[5];
@@ -46,9 +50,11 @@ class Display {
     VoidScreen voidScreen;
     SplashScreen splashScreen;
     MainMenu mainMenu;
+    MusicPlayer musicPlayer;
   
     Screen* currentScreen;
     SDManager* sdManager;
+    AudioManager* audioManager;
 };
 
 #endif // DISPLAY_H

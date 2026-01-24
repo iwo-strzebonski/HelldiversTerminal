@@ -9,7 +9,7 @@
 KeyboardManager keyboardManager;
 SDManager sdManager(SD_MISO, SD_MOSI, SD_SCLK, SD_CS);
 AudioManager audioManager(BCLK_PIN, DIN_PIN, &sdManager);
-Display display(&keyboardManager, &sdManager); 
+Display display(&keyboardManager, &sdManager, &audioManager); 
 
 long PRESS_DELAY = 250;
 unsigned long previousMillis = 0;
@@ -31,6 +31,9 @@ void setup() {
     return;
   }
 
+  // Load available MP3 tracks from the audio directory
+  audioManager.loadTracksFromDirectory("/audio");
+
   Serial.println("SD and Audio initialized successfully");
 
   pinMode(BACKLIGHT, OUTPUT);
@@ -39,7 +42,7 @@ void setup() {
   delay(PRESS_DELAY);
   attachInterrupt(TFT_IRQ, screenPressed, LOW);
 
-  audioManager.playMP3("/audio/Super Earth National Anthem.mp3");
+  // audioManager.playMP3("/audio/Super Earth National Anthem.mp3");
 }
 
 void loop() {

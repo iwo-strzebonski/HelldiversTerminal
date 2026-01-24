@@ -6,7 +6,7 @@
 
 #define MainMenu_TITLE "MAIN_MENU"
 
-#define BUTTON_COUNT 6
+#define BUTTON_COUNT 7
 
 class MainMenu : public Screen {
   public:
