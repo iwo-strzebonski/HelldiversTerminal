@@ -13,6 +13,7 @@ Display display(&keyboardManager, &sdManager, &audioManager);
 
 long PRESS_DELAY = 250;
 unsigned long previousMillis = 0;
+bool setupOk = false;
 
 void setup() {
   Serial.begin(115200);
@@ -42,22 +43,27 @@ void setup() {
   delay(PRESS_DELAY);
   attachInterrupt(TFT_IRQ, screenPressed, LOW);
 
+  // Bring up USB HID only after the rest of the system is ready, so that
+  // a partially-initialized device still enumerates a usable CDC serial
+  // endpoint and stays re-flashable over USB.
+  keyboardManager.begin();
+
+  setupOk = true;
+
   // audioManager.playMP3("/audio/Super Earth National Anthem.mp3");
 }
 
 void loop() {
-  audioManager.loop();
-
-  if (!audioManager.isPlaying()) {
-    audioManager.stop();
-    Serial.println("fin");
-    static const float melody[] = { 262, 294, 330, 349, 392, 440, 494, 523 };
-    for (auto note : melody) {
-      audioManager.playTone(note, 400);
-      audioManager.playTone(0, 50); // Pause
-    }
-    audioManager.playTone(0, 500); // Longer pause
+  // If setup() failed, keep loop() light so USB CDC stays responsive and
+  // the board can be re-flashed normally (no need to flash Blink via
+  // BOOTSEL to recover).
+  if (!setupOk) {
+    delay(10);
+    return;
   }
+
+  audioManager.loop();
+  delay(1);
 }
 
 
