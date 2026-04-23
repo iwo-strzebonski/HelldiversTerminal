@@ -14,6 +14,7 @@ Display display(&keyboardManager, &sdManager, &audioManager);
 long PRESS_DELAY = 250;
 unsigned long previousMillis = 0;
 bool setupOk = false;
+bool wasPressed = false;
 
 void setup() {
   Serial.begin(115200);
@@ -40,8 +41,12 @@ void setup() {
   pinMode(BACKLIGHT, OUTPUT);
   display.init();
 
+  // The XPT2046 IRQ pin is pulled LOW while the screen is being touched.
+  // We use it as a cheap "is anything pressed?" probe so we can avoid
+  // hammering the SPI bus with touch reads when nothing is happening.
+  pinMode(TFT_IRQ, INPUT_PULLUP);
+
   delay(PRESS_DELAY);
-  attachInterrupt(TFT_IRQ, screenPressed, LOW);
 
   // Bring up USB HID only after the rest of the system is ready, so that
   // a partially-initialized device still enumerates a usable CDC serial
@@ -63,25 +68,31 @@ void loop() {
   }
 
   audioManager.loop();
-  delay(1);
-}
 
+  // Polling the touch screen from loop() (instead of doing it from the
+  // TFT_IRQ interrupt handler) is important: the XPT2046 holds IRQ LOW
+  // for as long as the user keeps a finger on the panel, which means the
+  // ISR would re-fire continuously. That, combined with calling
+  // Keyboard.press()/release() and delay() from interrupt context (where
+  // the TinyUSB stack does not run), made released arrow keys look
+  // "stuck" to the host. Edge-detecting the press here guarantees one
+  // press + release per tap.
+  bool irqLow = digitalRead(TFT_IRQ) == LOW;
+  bool pressed = false;
+  uint16_t t_x = 0, t_y = 0;
 
-void screenPressed() {
+  if (irqLow) {
+    pressed = display.getTouch(&t_x, &t_y);
+  }
+
   unsigned long currentMillis = millis();
 
-  if (currentMillis - previousMillis < PRESS_DELAY) {
-    return;
+  if (pressed && !wasPressed && (currentMillis - previousMillis) >= PRESS_DELAY) {
+    previousMillis = currentMillis;
+    display.onTouch(t_x, t_y);
   }
 
-  previousMillis = currentMillis;
+  wasPressed = pressed;
 
-  uint16_t t_x = 0, t_y = 0;
-  bool pressed = display.getTouch(&t_x, &t_y);
-
-  if (!pressed) {
-    return;
-  }
-
-  display.onTouch(t_x, t_y);
+  delay(1);
 }

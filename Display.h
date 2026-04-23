@@ -40,6 +40,8 @@ class Display {
     int getHeight() const;
 
     bool getTouch(uint16_t *x, uint16_t *y) const;
+
+    void logCalibration(const char* source) const;
     
     AudioManager* getAudioManager() const;
 

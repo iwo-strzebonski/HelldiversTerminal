@@ -70,39 +70,28 @@ int Display::getWidth() const { return tft().width(); }
 int Display::getHeight() const { return tft().height(); }
 
 bool Display::getTouch(uint16_t *x, uint16_t *y) const {
-  uint16_t t_x = 0, t_y = 0;
-  bool pressed = tft().getTouchRaw(&t_x, &t_y);
+  // TFT_eSPI's getTouch() already applies the calibration data we
+  // installed via setTouch(calData), so it returns coordinates in screen
+  // space (respecting rotation). The previous custom mapping
+  // mis-interpreted calData[0..3] as raw min/max touch values, which
+  // caused taps to land on completely unrelated regions of the UI.
+  return tft().getTouch(x, y);
+}
 
-  bool x_o = 0, y_o = 0;
-
-  float scale_x = (float)tft().width() / (float)getMaxX();
-  float scale_y = (float)tft().height() / (float)getMaxY();
-
-  if (t_x < getMinX()) {
-    *x = tft().width();
-    x_o = 1;
-  } else if (t_x > getMaxX() + getMinX()) {
-    *x = 0;
-    x_o = 1;
+void Display::logCalibration(const char* source) const {
+  Serial.print("[Touch calibration] ");
+  Serial.print(source);
+  Serial.print(" calData = { ");
+  for (uint8_t i = 0; i < 5; ++i) {
+    Serial.print(calData[i]);
+    if (i < 4) Serial.print(", ");
   }
-
-  if (t_y < getMinY()) {
-    *y = tft().height();
-    y_o = 1;
-  } else if (t_y > getMaxY() + getMinY()) {
-    *y = 0;
-    y_o = 1;
-  }
-
-  if (!x_o) {
-    *x = (getMaxX() + getMinX() - t_x) * scale_x;
-  }
-
-  if (!y_o) {
-    *y = (getMaxY() + getMinY() - t_y) * scale_y;
-  }
-
-  return pressed;
+  Serial.print(" } screen=");
+  Serial.print(tft().width());
+  Serial.print("x");
+  Serial.print(tft().height());
+  Serial.print(" rotation=");
+  Serial.println(tft().getRotation());
 }
 
 void Display::calibrateTouch() {
@@ -128,6 +117,7 @@ void Display::calibrateTouch() {
   if (calDataOK && !REPEAT_CAL) {
     // calibration data valid
     tft().setTouch(calData);
+    logCalibration("loaded from SD");
   } else {
     // data not valid so recalibrate
     tft().fillScreen(TFT_BLACK);
@@ -158,6 +148,9 @@ void Display::calibrateTouch() {
       f.write((const uint8_t*)calData, sizeof(calData));
       f.close();
     }
+
+    tft().setTouch(calData);
+    logCalibration("freshly calibrated");
   }
 }
 
