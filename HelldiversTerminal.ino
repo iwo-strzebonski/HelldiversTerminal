@@ -11,7 +11,11 @@ SDManager sdManager(SD_MISO, SD_MOSI, SD_SCLK, SD_CS);
 AudioManager audioManager(BCLK_PIN, DIN_PIN, &sdManager);
 Display display(&keyboardManager, &sdManager, &audioManager); 
 
-long PRESS_DELAY = 250;
+// Hardware debounce window for the resistive touch panel. Edge detection
+// already gives us one logical event per tap; this only exists to swallow
+// the brief raw-coordinate glitches the XPT2046 can emit at the moment a
+// finger first contacts the panel.
+long PRESS_DELAY = 50;
 unsigned long previousMillis = 0;
 bool setupOk = false;
 bool wasPressed = false;

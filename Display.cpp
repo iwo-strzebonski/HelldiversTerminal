@@ -149,7 +149,8 @@ void Display::calibrateTouch() {
       f.close();
     }
 
-    tft().setTouch(calData);
+    // tft().calibrateTouch() above already installs the freshly-produced
+    // calibration via setTouch() internally, so we only need to log it.
     logCalibration("freshly calibrated");
   }
 }
