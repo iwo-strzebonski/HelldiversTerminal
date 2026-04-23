@@ -1,6 +1,77 @@
 # HelldiversTerminal
 RPi Pico based Hellpad from Helldivers 2
 
+## Setup & Installation
+
+### 1. Board Support
+
+Install the **Raspberry Pi Pico / RP2040** board package in the Arduino IDE:
+
+1. Open **File → Preferences** and add this URL to *Additional Boards Manager URLs*:
+   ```
+   https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
+   ```
+2. Open **Tools → Board → Boards Manager**, search for **"Pico"**, and install **Raspberry Pi Pico/RP2040** by Earle F. Philhower.
+3. Select **Tools → Board → Raspberry Pi RP2040 Boards → Raspberry Pi Pico**.
+
+### 2. Required Libraries
+
+Install all of the following libraries via **Sketch → Include Library → Manage Libraries** (or the PlatformIO equivalent):
+
+| Library | Author | Notes |
+|---------|--------|-------|
+| **TFT_eSPI** | Bodmer | Display & touch driver — **requires extra configuration (see below)** |
+| **SD** | Arduino | SD card file system |
+| **I2S** | Arduino (RP2040 core) | I2S audio output — included with the RP2040 board package |
+| **BackgroundAudioMP3** | Earle F. Philhower | MP3 decoding in the background |
+| **Keyboard** | Arduino | USB HID keyboard emulation |
+
+### 3. Configure TFT_eSPI (`User_Setup.h`)
+
+TFT_eSPI does **not** auto-detect hardware — you must tell it which pins and driver to use.
+
+The repository includes a pre-configured `User_Setup.h` for this project's hardware (ILI9488 display + XPT2046 touch on a Raspberry Pi Pico). You need to copy it into the installed library folder, **replacing** the default file:
+
+```
+<Arduino Libraries folder>/TFT_eSPI/User_Setup.h
+```
+
+The Arduino libraries folder is typically:
+- **Windows**: `Documents\Arduino\libraries\TFT_eSPI\`
+- **macOS**: `~/Documents/Arduino/libraries/TFT_eSPI/`
+- **Linux**: `~/Arduino/libraries/TFT_eSPI/`
+
+> **Why this is required:** the `HelldiversTerminal.ino` sketch sets `#define USER_SETUP_LOADED 1` at the top, which tells TFT_eSPI to skip its own internal configuration and use the file you provide. Without copying `User_Setup.h`, the library will use wrong defaults and the display will not work.
+
+Key settings defined in `User_Setup.h`:
+
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| `ILI9488_DRIVER` | — | Selects the ILI9488 display driver |
+| `TFT_MISO/MOSI/SCLK` | 0 / 3 / 2 | SPI0 pins for the display |
+| `TFT_CS` | 20 | Display chip select |
+| `TFT_DC` | 16 | Data/command pin |
+| `TFT_RST` | 21 | Display reset |
+| `TFT_IRQ` | 15 | Touch interrupt |
+| `TOUCH_CS` | 14 | Touch controller chip select |
+| `SPI_FREQUENCY` | 27 MHz | SPI clock for display writes |
+| `SPI_TOUCH_FREQUENCY` | 2.5 MHz | Lower SPI clock required by XPT2046 |
+
+### 4. SD Card Setup
+
+Format an SD card as **FAT32** and create an `/audio/` directory. Place MP3 files inside it:
+
+```
+/audio/
+  track1.mp3
+  track2.mp3
+  ...
+```
+
+The firmware auto-discovers all MP3 files in `/audio/` at startup via `AudioManager::loadTracksFromDirectory()`.
+
+---
+
 ## OOP Features
 
 This project demonstrates three key Object-Oriented Programming concepts:
