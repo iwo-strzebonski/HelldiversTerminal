@@ -1,6 +1,8 @@
 #include "KeyboardManager.h"
 
-KeyboardManager::KeyboardManager() {
+KeyboardManager::KeyboardManager() {}
+
+void KeyboardManager::begin() {
   Keyboard.begin();
 }
 
