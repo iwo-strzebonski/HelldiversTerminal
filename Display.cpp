@@ -70,12 +70,51 @@ int Display::getWidth() const { return tft().width(); }
 int Display::getHeight() const { return tft().height(); }
 
 bool Display::getTouch(uint16_t *x, uint16_t *y) const {
-  // TFT_eSPI's getTouch() already applies the calibration data we
-  // installed via setTouch(calData), so it returns coordinates in screen
-  // space (respecting rotation). The previous custom mapping
-  // mis-interpreted calData[0..3] as raw min/max touch values, which
-  // caused taps to land on completely unrelated regions of the UI.
-  return tft().getTouch(x, y);
+  // We deliberately use getTouchRaw() here instead of TFT_eSPI's
+  // getTouch(): the latter takes several samples with built-in delays to
+  // de-noise the panel, which is far too slow for our polling loop and
+  // caused a noticeable input-handling stall. getTouchRaw() does a single
+  // SPI read; we then apply the same calibration mapping that
+  // TFT_eSPI::convertRawXY() applies internally so the resulting
+  // coordinates are in screen space.
+  uint16_t t_x = 0, t_y = 0;
+  bool pressed = tft().getTouchRaw(&t_x, &t_y);
+  if (!pressed) return false;
+
+  // calData layout (produced by tft.calibrateTouch / consumed by setTouch):
+  //   [0] x raw offset, [1] x raw range,
+  //   [2] y raw offset, [3] y raw range,
+  //   [4] flags: bit0 = rotate (swap raw axes), bit1 = invert_x, bit2 = invert_y
+  uint16_t x_off = calData[0] ? calData[0] : 1;
+  uint16_t x_rng = calData[1] ? calData[1] : 1;
+  uint16_t y_off = calData[2] ? calData[2] : 1;
+  uint16_t y_rng = calData[3] ? calData[3] : 1;
+  bool rotate   = calData[4] & 0x01;
+  bool invert_x = calData[4] & 0x02;
+  bool invert_y = calData[4] & 0x04;
+
+  int32_t w = tft().width();
+  int32_t h = tft().height();
+
+  int32_t xx, yy;
+  if (!rotate) {
+    xx = ((int32_t)t_x - (int32_t)x_off) * w / (int32_t)x_rng;
+    yy = ((int32_t)t_y - (int32_t)y_off) * h / (int32_t)y_rng;
+  } else {
+    xx = ((int32_t)t_y - (int32_t)x_off) * w / (int32_t)x_rng;
+    yy = ((int32_t)t_x - (int32_t)y_off) * h / (int32_t)y_rng;
+  }
+  if (invert_x) xx = w - xx;
+  if (invert_y) yy = h - yy;
+
+  // Clamp to screen so a slightly off-edge raw sample doesn't wrap around
+  // to a wildly wrong UI region.
+  if (xx < 0) xx = 0; else if (xx >= w) xx = w - 1;
+  if (yy < 0) yy = 0; else if (yy >= h) yy = h - 1;
+
+  *x = (uint16_t)xx;
+  *y = (uint16_t)yy;
+  return true;
 }
 
 void Display::logCalibration(const char* source) const {
