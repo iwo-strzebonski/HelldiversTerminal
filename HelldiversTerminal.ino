@@ -11,7 +11,7 @@ SDManager sdManager(SD_MISO, SD_MOSI, SD_SCLK, SD_CS);
 AudioManager audioManager(BCLK_PIN, DIN_PIN, &sdManager);
 Display display(&keyboardManager, &sdManager, &audioManager); 
 
-// Hardware debounce window for the resistive touch panel. Edge detection
+// Software debounce window for the resistive touch panel. Edge detection
 // already gives us one logical event per tap; this only exists to swallow
 // the brief raw-coordinate glitches the XPT2046 can emit at the moment a
 // finger first contacts the panel.
