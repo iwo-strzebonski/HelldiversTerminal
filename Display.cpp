@@ -109,8 +109,16 @@ bool Display::getTouch(uint16_t *x, uint16_t *y) const {
 
   // Clamp to screen so a slightly off-edge raw sample doesn't wrap around
   // to a wildly wrong UI region.
-  if (xx < 0) xx = 0; else if (xx >= w) xx = w - 1;
-  if (yy < 0) yy = 0; else if (yy >= h) yy = h - 1;
+  if (xx < 0) {
+    xx = 0;
+  } else if (xx >= w) {
+    xx = w - 1;
+  }
+  if (yy < 0) {
+    yy = 0;
+  } else if (yy >= h) {
+    yy = h - 1;
+  }
 
   *x = (uint16_t)xx;
   *y = (uint16_t)yy;

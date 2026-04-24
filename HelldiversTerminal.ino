@@ -25,10 +25,10 @@ bool setupOk = false;
 volatile bool touchPending = false;
 
 // ISR: deliberately does the absolute minimum. We do NOT touch the SPI
-// bus (the XPT2046 share with the TFT/SD), call any USB HID function, or
-// use delay() from here -- TinyUSB does not get to run inside an ISR, and
-// SPI transactions started from interrupt context can collide with ones
-// already in flight on the main thread. Just flag the event and let
+// bus (the XPT2046 shares it with the TFT/SD), call any USB HID function,
+// or use delay() from here -- TinyUSB does not get to run inside an ISR,
+// and SPI transactions started from interrupt context can collide with
+// ones already in flight on the main thread. Just flag the event and let
 // loop() handle it on the next iteration.
 void touchISR() {
   touchPending = true;
