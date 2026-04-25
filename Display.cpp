@@ -62,6 +62,11 @@ AudioManager* Display::getAudioManager() const {
   return audioManager;
 }
 
+unsigned long Display::getPressDebounceMs() const {
+  return currentScreen ? currentScreen->getPressDebounceMs()
+                       : Screen::DEFAULT_PRESS_DEBOUNCE_MS;
+}
+
 uint16_t Display::getMinX() const { return calData[0]; }
 uint16_t Display::getMaxX() const { return calData[1]; }
 uint16_t Display::getMinY() const { return calData[2]; }
