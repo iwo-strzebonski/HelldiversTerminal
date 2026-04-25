@@ -70,39 +70,75 @@ int Display::getWidth() const { return tft().width(); }
 int Display::getHeight() const { return tft().height(); }
 
 bool Display::getTouch(uint16_t *x, uint16_t *y) const {
+  // We deliberately use getTouchRaw() here instead of TFT_eSPI's
+  // getTouch(): the latter takes several samples with built-in delays to
+  // de-noise the panel, which is far too slow for our polling loop and
+  // caused a noticeable input-handling stall. getTouchRaw() does a single
+  // SPI read; we then apply the same calibration mapping that
+  // TFT_eSPI::convertRawXY() applies internally so the resulting
+  // coordinates are in screen space.
   uint16_t t_x = 0, t_y = 0;
   bool pressed = tft().getTouchRaw(&t_x, &t_y);
+  if (!pressed) return false;
 
-  bool x_o = 0, y_o = 0;
+  // calData layout (produced by tft.calibrateTouch / consumed by setTouch):
+  //   [0] x raw offset, [1] x raw range,
+  //   [2] y raw offset, [3] y raw range,
+  //   [4] flags: bit0 = rotate (swap raw axes), bit1 = invert_x, bit2 = invert_y
+  uint16_t x_off = calData[0] ? calData[0] : 1;
+  uint16_t x_rng = calData[1] ? calData[1] : 1;
+  uint16_t y_off = calData[2] ? calData[2] : 1;
+  uint16_t y_rng = calData[3] ? calData[3] : 1;
+  bool rotate   = calData[4] & 0x01;
+  bool invert_x = calData[4] & 0x02;
+  bool invert_y = calData[4] & 0x04;
 
-  float scale_x = (float)tft().width() / (float)getMaxX();
-  float scale_y = (float)tft().height() / (float)getMaxY();
+  int32_t w = tft().width();
+  int32_t h = tft().height();
 
-  if (t_x < getMinX()) {
-    *x = tft().width();
-    x_o = 1;
-  } else if (t_x > getMaxX() + getMinX()) {
-    *x = 0;
-    x_o = 1;
+  int32_t xx, yy;
+  if (!rotate) {
+    xx = ((int32_t)t_x - (int32_t)x_off) * w / (int32_t)x_rng;
+    yy = ((int32_t)t_y - (int32_t)y_off) * h / (int32_t)y_rng;
+  } else {
+    xx = ((int32_t)t_y - (int32_t)x_off) * w / (int32_t)x_rng;
+    yy = ((int32_t)t_x - (int32_t)y_off) * h / (int32_t)y_rng;
+  }
+  if (invert_x) xx = w - xx;
+  if (invert_y) yy = h - yy;
+
+  // Clamp to screen so a slightly off-edge raw sample doesn't wrap around
+  // to a wildly wrong UI region.
+  if (xx < 0) {
+    xx = 0;
+  } else if (xx >= w) {
+    xx = w - 1;
+  }
+  if (yy < 0) {
+    yy = 0;
+  } else if (yy >= h) {
+    yy = h - 1;
   }
 
-  if (t_y < getMinY()) {
-    *y = tft().height();
-    y_o = 1;
-  } else if (t_y > getMaxY() + getMinY()) {
-    *y = 0;
-    y_o = 1;
-  }
+  *x = (uint16_t)xx;
+  *y = (uint16_t)yy;
+  return true;
+}
 
-  if (!x_o) {
-    *x = (getMaxX() + getMinX() - t_x) * scale_x;
+void Display::logCalibration(const char* source) const {
+  Serial.print("[Touch calibration] ");
+  Serial.print(source);
+  Serial.print(" calData = { ");
+  for (uint8_t i = 0; i < 5; ++i) {
+    Serial.print(calData[i]);
+    if (i < 4) Serial.print(", ");
   }
-
-  if (!y_o) {
-    *y = (getMaxY() + getMinY() - t_y) * scale_y;
-  }
-
-  return pressed;
+  Serial.print(" } screen=");
+  Serial.print(tft().width());
+  Serial.print("x");
+  Serial.print(tft().height());
+  Serial.print(" rotation=");
+  Serial.println(tft().getRotation());
 }
 
 void Display::calibrateTouch() {
@@ -128,6 +164,7 @@ void Display::calibrateTouch() {
   if (calDataOK && !REPEAT_CAL) {
     // calibration data valid
     tft().setTouch(calData);
+    logCalibration("loaded from SD");
   } else {
     // data not valid so recalibrate
     tft().fillScreen(TFT_BLACK);
@@ -158,6 +195,10 @@ void Display::calibrateTouch() {
       f.write((const uint8_t*)calData, sizeof(calData));
       f.close();
     }
+
+    // tft().calibrateTouch() above already installs the freshly-produced
+    // calibration via setTouch() internally, so we only need to log it.
+    logCalibration("freshly calibrated");
   }
 }
 
