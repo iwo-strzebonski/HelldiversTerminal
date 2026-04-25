@@ -20,6 +20,11 @@ class SplashScreen : public Screen {
     // Override render and onClick as needed
     TFT_eSPI& render() override;
     String onClick(uint16_t x, uint16_t y) override;
+
+    // SplashScreen's whole surface advances to MainMenu, so use a longer
+    // debounce for the same reason as VoidScreen -- avoids one physical
+    // tap being counted as several taps across consecutive screens.
+    unsigned long getPressDebounceMs() const override { return 500; }
 };
 
 #endif // SPLASHSCREEN_H

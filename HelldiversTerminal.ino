@@ -11,9 +11,14 @@ SDManager sdManager(SD_MISO, SD_MOSI, SD_SCLK, SD_CS);
 AudioManager audioManager(BCLK_PIN, DIN_PIN, &sdManager);
 Display display(&keyboardManager, &sdManager, &audioManager); 
 
-// Software debounce window for the resistive touch panel. The XPT2046 IRQ
-// line can briefly chatter at the moment a finger first contacts the
-// panel; we ignore further press events that arrive within this window.
+// Default software debounce window for the resistive touch panel. The
+// XPT2046 IRQ line can briefly chatter at the moment a finger first
+// contacts the panel; we ignore further press events that arrive within
+// this window. Individual screens can request a longer window via
+// Screen::getPressDebounceMs() (used at touch-dispatch time below) --
+// notably the full-screen "tap anywhere" screens (Splash, Void) bump
+// this up so a single physical tap can't bounce through several
+// consecutive screens before the finger leaves the panel.
 long PRESS_DELAY = 50;
 unsigned long previousMillis = 0;
 bool setupOk = false;
@@ -106,7 +111,11 @@ void loop() {
     touchPending = false;
 
     unsigned long currentMillis = millis();
-    if ((currentMillis - previousMillis) >= PRESS_DELAY) {
+    // Use the active screen's debounce window so screens whose entire
+    // surface is a click target (Splash, Void) can ask for a longer
+    // window than the default panel-chatter guard.
+    unsigned long debounceMs = display.getPressDebounceMs();
+    if ((currentMillis - previousMillis) >= debounceMs) {
       previousMillis = currentMillis;
 
       uint16_t t_x = 0, t_y = 0;

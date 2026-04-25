@@ -41,6 +41,11 @@ class Display {
 
     bool getTouch(uint16_t *x, uint16_t *y) const;
 
+    // Returns the debounce window (ms) the currently-active screen wants
+    // applied between successive accepted touch events. Falls back to the
+    // base-class default if no screen is set yet.
+    unsigned long getPressDebounceMs() const;
+
     void logCalibration(const char* source) const;
     
     AudioManager* getAudioManager() const;
